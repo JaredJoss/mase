@@ -58,11 +58,12 @@ Figures 5 and 6 show the effect of the learning rate on training and validation 
 **Figure 6** - Validation accuracy with different learning rates
 
 ## Relationship Between Learning Rate and Batch size
-Smaller batch sizes often require a smaller learning rate because the model's parameters are updated more frequently, and large learning rate steps may lead to instability.
+Smaller batch sizes often require a smaller learning rate because the model's parameters are updated more frequently due to the fact that more steps are required to complete each epoch, and large learning rate steps may lead to instability.
+
 Larger batch sizes may tolerate higher learning rates because the updates are less frequent, and more training examples are considered in each iteration.
 
 # Question 4
-The network which has about 10X more parametrs than the Tiny network (1400 parameters) can be seen below.
+The network ([JSC_Medium](../machop/chop/models/physical/jet_substructure/__init__.py)), which has about 10X more parameters than the Tiny network (1400 parameters), can be seen below. 
 
 ```
 class JSC_Medium(nn.Module):
@@ -103,10 +104,13 @@ After the network has trained, it is tested using the following command;
 ./ch test jsc-medium jsc --load ../mase_output/jsc-medium_classification_jsc_2024-01-24/software/training_ckpts/best.ckpt --load-type pl
 ```
 
-Figure 7 below shos the results of the testing. It is evident that this network achieved an accuracy of 72.30%. 
+Figure 7 below shows the results of the testing. It is evident that this network achieved an accuracy of 72.30%. 
 
 ![Alt text](image.png)
 **Figure 7** - Test accuracy of custom network
+
+Furthermore, the network is tested againt the Tiny network in order to fully evaluate it.
+
 
 
 
