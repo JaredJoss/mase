@@ -15,7 +15,7 @@ The term `call_function` is associated with the utilization of standalone, user-
 Lastly, `call_method` signifies a method call on an object, specifically bound to the tensor object in this context.
 
 # Question 2
-`profile_statistics_analysis_pass`:  Execute profile statistics analysis on the provided graph. This involves gathering statistics related to parameters and activations and storing them in the metadata of the respective nodes. Statistics involves the following functions:
+The pass `profile_statistics_analysis_pass` execute profile statistics analysis on the provided graph. This involves gathering statistics related to parameters and activations and storing them in the metadata of the respective nodes. Statistics involves the following functions:
 
 #### Record
   - **Description:** Records all input samples.
@@ -75,35 +75,38 @@ The `quantize_transform_pass` function receives arguments (via pass_args), and s
 The code to traverse ```mg``` and ```ori_mg``` can be seen below;
 
 ```python
-from chop.ir.graph.mase_graph import MaseGraph
-from chop.passes.graph.utils import get_mase_op, get_mase_type, get_node_actual_target
+# import utility functions
+from chop.passes.graph.utils import get_mase_op, get_node_actual_target
 
-# iterate over original and modified graphs
+# iterate over original and modified graphs to get the nodes of each respective graph
 for ori_n, n in zip(ori_mg.fx_graph.nodes, mg.fx_graph.nodes):
-    # check if the original node and the modified node are the same
+    # check if the original node and the modified node are the same.
     # if they are not, then it means that that node has been quantized
     if type(get_node_actual_target(n)) != type(get_node_actual_target(ori_n)):
+
         # retrieve the original module from the node
         ori_module = get_node_actual_target(ori_n)
         # retrieve the quantized module from the node
         quant_module = get_node_actual_target(n)
 
-        print(f'Difference found at name: {n.name}, '
-              f'MASE type: {get_mase_type(n)}, MASE operation: {get_mase_op(n)}\n'
-              f'Original module: {type(ori_module)} --> '
-              f'New module: {type(quant_module)}')
+        # output where the difference was found
+        print(f"A difference was found with '{ori_n.name}' and operation '{get_mase_op(ori_n)}'")
+
+        # output the original type and quantized type to show the quantized type has changed
+        print("Original Type:  ", type(ori_module))
+        print("Quantized Type:  ", type(quant_module))
         
-        # Get the precision of the original and quantized weights from the metadata
+        # get the precision of the original and quantized weights from the metadata
         ori_n_precision = ori_n.meta["mase"].parameters["common"]["args"]["weight"]["precision"]
         n_precision = n.meta["mase"].parameters["common"]["args"]["weight"]["precision"]
         
-        # Get the Types of the original and quantized weights from the metadata
+        # get the Types of the original and quantized weights from the metadata
         ori_n_type = ori_n.meta["mase"].parameters["common"]["args"]["weight"]["type"]
         n_type = n.meta["mase"].parameters["common"]["args"]["weight"]["type"]
         
-        #original weights
+        # original weights
         ori_weights = ori_module.weight
-        # quantize the weights of the module
+        # quantize the weights of the original module
         quantized_weights = quant_module.w_quantizer(ori_module.weight)
 ```
 
@@ -228,26 +231,30 @@ for ori_n, n in zip(ori_mg.fx_graph.nodes, mg.fx_graph.nodes):
         # retrieve the quantized module from the node
         quant_module = get_node_actual_target(n)
 
-        print(f'Difference found at name: {n.name}, '
-              f'MASE type: {get_mase_type(n)}, MASE operation: {get_mase_op(n)}\n'
-              f'Original module: {type(ori_module)} --> '
-              f'New module: {type(quant_module)}')
+        # output where the difference was found
+        print(f"A difference was found with '{ori_n.name}' and operation '{get_mase_op(ori_n)}'")
+
+        # output the original type and quantized type to show the quantized type has changed
+        print("Original Type:  ", type(ori_module))
+        print("Quantized Type:  ", type(quant_module))
         
-        # Get the precision of the original and quantized weights from the metadata
+        # get the precision of the original and quantized weights from the metadata
         ori_n_precision = ori_n.meta["mase"].parameters["common"]["args"]["weight"]["precision"]
         n_precision = n.meta["mase"].parameters["common"]["args"]["weight"]["precision"]
         
-        # Get the Types of the original and quantized weights from the metadata
+        # get the Types of the original and quantized weights from the metadata
         ori_n_type = ori_n.meta["mase"].parameters["common"]["args"]["weight"]["type"]
         n_type = n.meta["mase"].parameters["common"]["args"]["weight"]["type"]
         
-        #original weights
+        # original weights
         ori_weights = ori_module.weight
         # quantize the weights of the module
         quantized_weights = quant_module.w_quantizer(ori_module.weight)
 ```
 
-When outputting the original weights, ```ori_weights```, and the quantized weights, ```quantized_weights```, the differences can be seen below. 
+The output of the above code shows that the precision has changed from `[32]` in the original module to `[8, 4]` in the quantized module.
+
+Additoanlly, when outputting the original weights, ```ori_weights```, and the quantized weights, ```quantized_weights```, the differences can be seen below. 
 
 The weights of the first tensor of the original module:
 ```
@@ -262,7 +269,9 @@ The weights of the first tensor of the quantized module:
 It is evident that the weights have been successfuly quantized.
 
 # Question 7
-My pre-trained network is loaded in using `./ch transform --config configs/examples/jsc_medium.toml --task cls --cpu=0`.
+My pre-trained network is loaded in using the toml file defined in [jsc_medium.toml](../machop/configs/examples/jsc_medium.toml) with the following command;
+
+`./ch transform --config configs/examples/jsc_medium.toml --task cls --cpu=0`.
 
 Figure 2 below shows the output of this command. It is evident that the model has been transformed.
 
