@@ -262,3 +262,9 @@ The weights of the first tensor of the quantized module:
 It is evident that the weights have been successfuly quantized.
 
 # Question 7
+My pre-trained network is loaded in using `./ch transform --config configs/examples/jsc_medium.toml --task cls --cpu=0`.
+
+Figure 2 below shows the output of this command. It is evident that the model has been transformed.
+
+![Alt text](lab_2_media/lab_2_task_7.png)
+**Figure 2** - Quantization from command line
