@@ -36,7 +36,7 @@ PHYSICAL_MODELS = {
     "jsc-medium": {
         "model": get_jsc_medium,
         "info": MaseModelInfo(
-            "jsc-medium",
+            "jsc-s",
             model_source="physical",
             task_type="physical",
             physical_data_point_classification=True,
