@@ -6,6 +6,7 @@ from pprint import pprint as pp
 import time
 from count_flops_in_forward_pass import count_flops_in_forward_pass
 from thop import profile
+from deepspeed.profiling.flops_profiler import get_model_profile
 
 # figure out the correct path
 machop_path = Path(".").resolve() /"machop"
@@ -32,16 +33,12 @@ from chop.ir.graph.mase_graph import MaseGraph
 
 from chop.models import get_model_info, get_model
 
-
-
-
 logger = logging.getLogger("chop")
 logger.setLevel(logging.INFO)
 
 batch_size = 8
 model_name = "jsc-tiny"
 dataset_name = "jsc"
-
 
 data_module = MaseDataModule(
     name=dataset_name,
@@ -107,6 +104,7 @@ for d_config in data_in_frac_widths:
         # in fact, only primitive data types in python are doing implicit copy when a = b happens
         search_spaces.append(copy.deepcopy(pass_args))
 
+print("search_spaces:  ", search_spaces)
 
 # grid search
 import torch
@@ -128,6 +126,12 @@ recorded_accs, recorded_loss, recorded_lats, recorded_flops = [], [], [], []
 for i, config in enumerate(search_spaces):
     mg, _ = quantize_transform_pass(mg, config)
     j = 0
+
+    # flops, macs, params = get_model_profile(mg.model)
+
+    # print("flops:  ", flops)
+    # print("macs:  ", macs)
+    # print("params:  ", params)
 
     # this is the inner loop, where we also call it as a runner.
     acc_avg, loss_avg, lat_avg, flops_avg = 0, 0, 0, 0
@@ -168,4 +172,3 @@ print("recorded_loss:  ", recorded_loss)
 print("recorded_lats:  ", recorded_lats)
 print("model_size:  ", model_size)
 print("recorded_flops:  ", recorded_flops)
-
