@@ -3,12 +3,12 @@ Figure 1 and Figure 2 shows how varying batch sizes have an affect on the traini
 
 Larger batch sizes result in better computational efficiency. From Figure 2, it is evident that larger batch sizes require less time to complete all epochs. A batch size of 32 took 1.317 hours to complete while a batch size of 256 required only 10.06 minutes. Additionally, a batch size of 256 took ~30,000 steps to complete 10 epochs while a batch size of 32 took ~8X longer with over 246,000 steps. This is because modern hardware, especially GPUs, are optimized for parallel processing, and larger batches can exploit this parallelism.
 
-Smaller batch sizes can lead to better generalization. Training with smaller batches introduces more noise into the weight updates, which can help the model generalize better to unseen data. Larger batches resulted in a model that memorizes the training data more, leading to overfitting on the training set and potentially poor generalization to new data. The most optimal batch size with the Mase default paramters is 128 and 256, where both achieve a validation accuracy of ~70%.
+Smaller batch sizes can lead to better generalization. Training with smaller batches introduces more noise into the weight updates, which can help the model generalize better to unseen data. Larger batches resulted in a model that memorizes the training data more, leading to overfitting on the training set and potentially poor generalization to new data. The most optimal batch size with the Mase default paramters is 128 and 256, where both achieve a validation accuracy of ~70%. The largest batch size tested, 512, received a validation accuracy of ~43%.
 
 <!-- The figure below shows the results of varying the batch size for the jsc-tiny model over 10 epochs. Batch sizes of 64, 128, 256, and 512.
 After 10 epochs, the model with a batch size of 64 has a test accuracy of 49.50%, batch size of 128 has an accuracy of 51.87%, batch size of 256 has an accuracy of 50.48% while a batch size of 512 has an accuracy of 44.64%. -->
 
-![Alt text](lab_1_media/batch_train_acc_step.png)
+![Alt text](lab_1_media/epochs_train_acc_step.png)
 **Figure 1** - Training accuracy with different batch sizes
 
 
