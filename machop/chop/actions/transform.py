@@ -42,6 +42,7 @@ def transform(
     load_type: str = None,
 ):
     model = pre_transform_load(load_name=load_name, load_type=load_type, model=model)
+    model.to(device)
     config = load_config(config)
     save_dir = Path(save_dir)
     save_dir.mkdir(parents=True, exist_ok=True)
@@ -54,7 +55,7 @@ def transform(
     # graph generation
     graph = MaseGraph(model=model, cf_args=cf_args)
     # graph_metadata = Mase
-    graph, _ = init_metadata_analysis_pass(graph, pass_args=None)
+    graph = init_metadata_analysis_pass(graph, pass_args=None)
     # logger.info(f"graph: {graph.fx_graph}")
 
     # create or load metadata.parameters and mase_graph.model
@@ -65,14 +66,11 @@ def transform(
             model_info=model_info,
             data_module=data_module,
             task=task,
-            device=device,
         )
         if len(graph.model.additional_inputs) > 0:
             dummy_in = dummy_in | graph.model.additional_inputs
-        graph, _ = add_common_metadata_analysis_pass(
-            graph, pass_args={"dummy_in": dummy_in, "force_device_meta": False}
-        )
-        graph, _ = add_software_metadata_analysis_pass(graph, pass_args=None)
+        graph = add_common_metadata_analysis_pass(graph, pass_args=dummy_in)
+        graph = add_software_metadata_analysis_pass(graph, pass_args=None)
 
     pass_config = config["passes"]
 
@@ -80,14 +78,13 @@ def transform(
         pass_name: str
         pass_config: dict
         match pass_name:
-            # TODO: fix this later!
-            # case "quantize":
-            #     pass_save_dir = save_dir / "quantize"
-            #     ori_graph = deepcopy_mase_graph(graph)
-            #     graph = PASSES["quantize"](graph, pass_args=pass_config)
-            #     PASSES["summarize_quantization"](
-            #         ori_graph, graph, save_dir=pass_save_dir
-            #     )
+            case "quantize":
+                pass_save_dir = save_dir / "quantize"
+                ori_graph = deepcopy_mase_graph(graph)
+                graph = PASSES["quantize"](graph, pass_args=pass_config)
+                PASSES["summarize_quantization"](
+                    ori_graph, graph, save_dir=pass_save_dir
+                )
             case "profile_statistics":
                 input_generator = InputGenerator(
                     model_info=model_info,
@@ -174,7 +171,7 @@ def transform(
             case _:
                 my_pass = PASSES[pass_name]
                 graph = my_pass(graph, pass_args=pass_config)
-        graph, pass_info = graph
+
         assert isinstance(
             graph, MaseGraph
         ), f"Return type of {pass_name} must be MaseGraph, got {type(graph)}"
