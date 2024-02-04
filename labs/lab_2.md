@@ -254,7 +254,7 @@ for ori_n, n in zip(ori_mg.fx_graph.nodes, mg.fx_graph.nodes):
 
 The output of the above code shows that the precision has changed from `[32]` in the original module to `[8, 4]` in the quantized module.
 
-Additoanlly, when outputting the original weights, ```ori_weights```, and the quantized weights, ```quantized_weights```, the differences can be seen below. 
+Additonally, when outputting the original weights, ```ori_weights```, and the quantized weights, ```quantized_weights```, the differences can be seen below. 
 
 The weights of the first tensor of the original module:
 ```
