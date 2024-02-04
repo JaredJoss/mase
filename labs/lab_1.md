@@ -22,7 +22,9 @@ If the maximum number of epochs is too low, the model might not have sufficient 
 
 However, if the maximum number of epochs is too high, the model may start memorizing the training data (overfitting), capturing noise in the dataset rather than learning the underlying patterns. This can result in poor generalization to new data.
 
-Additonally, increasing the maximum number of epochs increases the overall training time. This is because the model goes through more iterations of updating its weights with each additional epoch. This is evident in Figure 3 and Figure 4 where 100 epochs took ~3.5 hours to train and 5 epochs took ~3.5 minutes to train. In both these situations the validation and training accuracy remained largely the same, indicating that the model is not complex enough to properly fit the data. 
+Additonally, increasing the maximum number of epochs increases the overall training time. This is because the model goes through more iterations of updating its weights with each additional epoch. This is evident in Figure 3 and Figure 4 where 100 epochs took ~3.5 hours to train and 5 epochs took ~3.5 minutes to train. In both these situations the validation and training accuracy remained largely the same, indicating that the model is not complex enough to properly fit the data.
+
+Furthermore, it is evident from Figure 4 that each model follows a very similar path to eacother and at epoch 5, there is only 0.13% range in the validation accuracy of all the models. This is expected as all hyperparmeters are the same except the number of epochs and so similart results will occur at the same epoch number. 
 
 <!-- To show the impact of this, the jsc-tiny model was used with a batch size of 128 over 5, 10, and 20 epochs. 
 After 5 epochs, the accuracy is 50.26%, it is 51.87% after 10 epochs and x% after 20 epochs.  -->
