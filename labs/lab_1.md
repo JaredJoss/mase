@@ -16,7 +16,7 @@ After 10 epochs, the model with a batch size of 64 has a test accuracy of 49.50%
 **Figure 2** - Validation accuracy with different batch sizes
 
 # Question 2
-Figures 3 and 4 show the effect of the varying the maximum number of epochs on training and validation accuracy, respectively. Models with a maximum of 5, 10, 20, 50 , and 100 epochs are trained and evaluated. 
+Figures 3 and 4 show the effect of the varying the maximum number of epochs on training and validation accuracy, respectively. Models with a maximum of 5, 10, 20, 50, and 100 epochs were trained and evaluated. 
 
 If the maximum number of epochs is too low, the model might not have sufficient time to learn the underlying patterns in the data, leading to underfitting. The model may not perform well on either the training set or unseen data.
 

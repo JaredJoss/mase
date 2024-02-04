@@ -7,6 +7,7 @@ import time
 from count_flops_in_forward_pass import count_flops_in_forward_pass
 from thop import profile
 from deepspeed.profiling.flops_profiler import get_model_profile
+from ptflops import get_model_complexity_info
 
 # figure out the correct path
 machop_path = Path(".").resolve() /"machop"
@@ -147,8 +148,11 @@ for i, config in enumerate(search_spaces):
         losses.append(loss)
 
         # Count FLOPs in the forward pass
-        flops, _ = profile(mg.model, inputs=(xs,))
-        flops_lst.append(flops)
+        # flops, _ = profile(mg.model, inputs=(xs,))
+        # flops_lst.append(flops)
+
+        flops, params = get_model_complexity_info(mg.model, (xs,), as_strings=True, print_per_layer_stat=True)
+        print('FLOPs:', flops)
 
         if j > num_batchs:
             break
@@ -167,8 +171,8 @@ for i, config in enumerate(search_spaces):
     recorded_lats.append(lat_avg)
     recorded_flops.append(flops_avg)
 
-print("recorded_accs:  ", recorded_accs)
-print("recorded_loss:  ", recorded_loss)
-print("recorded_lats:  ", recorded_lats)
-print("model_size:  ", model_size)
-print("recorded_flops:  ", recorded_flops)
+# print("recorded_accs:  ", recorded_accs)
+# print("recorded_loss:  ", recorded_loss)
+# print("recorded_lats:  ", recorded_lats)
+# print("model_size:  ", model_size)
+# print("recorded_flops:  ", recorded_flops)
