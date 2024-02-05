@@ -9,3 +9,13 @@ The following quality metrics can be used for the search process:
 
 # Question 2
 Accuracy and loss serve as the same quality metric because the task at hand is a classification task, where the primary goal is to correctly classify input samples. Accuracy is a common metric used to measure the model's ability to correctly classify samples, while loss is often used as the optimization objective in training. In classification tasks, optimizing for accuracy and minimizing cross-entropy loss generally align with each other.
+
+# Question 3
+The brute force search can be implemented by following the procedure `optuna.py`. In the `sampler_map` function, an addiotnal case for brutesearch is added;
+
+```python
+case "bruteforce":
+    sampler = optuna.samplers.BruteForceSampler()
+```
+
+To use this new search method, the `sampler` variable in the `[search.strategy.setup]` section of the `jsc_toy_by_type.toml` is changed to `brutesearch`.
