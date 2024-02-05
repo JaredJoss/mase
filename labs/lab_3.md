@@ -10,6 +10,125 @@ The following quality metrics can be used for the search process:
 # Question 2
 Accuracy and loss serve as the same quality metric because the task at hand is a classification task, where the primary goal is to correctly classify input samples. Accuracy is a common metric used to measure the model's ability to correctly classify samples, while loss is often used as the optimization objective in training. In classification tasks, optimizing for accuracy and minimizing cross-entropy loss generally align with each other.
 
+In addition to the exisiting accuracy and loss metrics, precision, recall, f1-score, latency, model size and gpu power usage are implemented as seen below.
+
+```python
+# calculate model size (number of parameters)
+model_size = sum(p.numel() for p in mg.model.parameters())
+
+metric = MulticlassAccuracy(num_classes=5)
+precision = Precision(num_classes=5, average='weighted', task='multiclass')
+recall = Recall(num_classes=5, average='weighted', task='multiclass')
+f1_score = F1Score(num_classes=5, average='weighted', task='multiclass')
+
+num_batchs = 5
+# This first loop is basically our search strategy,
+# in this case, it is a simple brute force search
+
+recorded_accs, recorded_loss, recorded_prec, recorded_rec, recorded_f1, recorded_lats, recorded_gpu_pow = [], [], [], [], [], [], []
+    
+# get current GPU power usage
+def fetch_gpu_power():
+    try:
+        # Use subprocess to execute the nvidia-smi command and retrieve power draw information
+        power_info = subprocess.check_output(['nvidia-smi', '--query-gpu=power.draw', '--format=csv,noheader,nounits']).decode().strip()
+
+        # Extract power draw values and convert them to a list of floats
+        power_draw_values = []
+        for value in power_info.split('\n'):
+            power_draw_values.append(float(value))
+
+        return True, power_draw_values
+
+    # Handle exceptions, for example, when nvidia-smi is not found
+    except Exception as error:
+        return False, []
+
+# check for GPU
+_, has_gpu = fetch_gpu_power()
+
+for i, config in enumerate(search_spaces):
+    mg, _ = quantize_transform_pass(mg, config)
+    j = 0
+
+    # this is the inner loop, where we also call it as a runner.
+    acc_avg, loss_avg, prec_avg, rec_avg, f1_avg, lat_avg, gpu_avg = 0, 0, 0, 0, 0, 0, 0
+    accs, losses, precs, recs, f1s, latencies, gpu_pow = [], [], [], [], [], [], []
+
+    for inputs in data_module.train_dataloader():
+        # measure GPU power before prediction
+        if has_gpu:
+            _, gpu_before_pred = sum(fetch_gpu_power()[0])
+
+        xs, ys = inputs
+        start = time.time()
+        preds = mg.model(xs)
+        end = time.time()
+
+        # measure GPU power after prediction
+        if has_gpu:
+            _, gpu_after_pred = sum(fetch_gpu_power()[0])
+            gpu_used = gpu_after_pred - gpu_before_pred
+            gpu_pow.append(gpu_used)
+
+        # calculate loss
+        loss = torch.nn.functional.cross_entropy(preds, ys)
+        # calculate accuracy
+        acc = metric(preds, ys)
+        # calculate precision
+        prec = precision(preds, ys)
+        # caluclate recall
+        rec = recall(preds, ys)
+        # calculate f1_score
+        f1 = f1_score(preds, ys)
+
+        # append to list
+        accs.append(acc)
+        losses.append(loss)
+        precs.append(prec)  
+        recs.append(rec)
+        f1s.append(f1)
+
+        if j > num_batchs:
+            break
+        j += 1
+
+        # calculate latency
+        latency = end - start
+        latencies.append(latency)
+
+    # calculate averages
+    acc_avg = sum(accs) / len(accs)
+    loss_avg = sum(losses) / len(losses)
+    prec_avg = sum(precs) / len(precs)
+    rec_avg = sum(recs) / len(recs)
+    f1_avg = sum(f1s) / len(f1s)
+    lat_avg = sum(latencies) / len(latencies)
+
+    # append averges to list
+    recorded_accs.append(acc_avg.item())
+    recorded_loss.append(loss_avg.item())
+    recorded_prec.append(prec_avg.item())
+    recorded_rec.append(rec_avg.item())
+    recorded_f1.append(f1_avg.item())
+    recorded_lats.append(lat_avg)
+
+    # add in gpu power if gpu is being used
+    if has_gpu:
+        gpu_avg = sum(gpu_pow) / len(gpu_pow)
+        recorded_gpu_pow.append(gpu_avg)
+
+# print metric results
+print("recorded_accs:  ", recorded_accs)
+print("recorded_loss:  ", recorded_loss)
+print("recorded_prec:  ", recorded_prec)
+print("recorded_rec:  ", recorded_rec)
+print("recorded_f1:  ", recorded_f1)
+print("recorded_lats:  ", recorded_lats)
+print("model_size:  ", model_size)
+print(f"recorded_gpu_pow:  {recorded_gpu_pow}" if has_gpu else "No GPU found")
+```
+
 # Question 3
 The brute force search can be implemented by following the procedure `optuna.py`. In the `sampler_map` function, an addiotnal case for brutesearch is added;
 
