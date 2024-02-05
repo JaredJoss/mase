@@ -1,6 +1,7 @@
 import sys
 import logging
 import os
+import subprocess
 import torch
 from pathlib import Path
 from pprint import pprint as pp
@@ -129,21 +130,51 @@ num_batchs = 5
 # This first loop is basically our search strategy,
 # in this case, it is a simple brute force search
 
-recorded_accs, recorded_loss, recorded_prec, recorded_rec, recorded_f1, recorded_lats = [], [], [], [], [], []
+recorded_accs, recorded_loss, recorded_prec, recorded_rec, recorded_f1, recorded_lats, recorded_gpu_pow = [], [], [], [], [], [], []
+    
+# get current GPU power usage
+def fetch_gpu_power():
+    try:
+        # Use subprocess to execute the nvidia-smi command and retrieve power draw information
+        power_info = subprocess.check_output(['nvidia-smi', '--query-gpu=power.draw', '--format=csv,noheader,nounits']).decode().strip()
+
+        # Extract power draw values and convert them to a list of floats
+        power_draw_values = []
+        for value in power_info.split('\n'):
+            power_draw_values.append(float(value))
+
+        return True, power_draw_values
+
+    # Handle exceptions, for example, when nvidia-smi is not found
+    except Exception as error:
+        return False, []
+
+# check for GPU
+_, has_gpu = fetch_gpu_power()
 
 for i, config in enumerate(search_spaces):
     mg, _ = quantize_transform_pass(mg, config)
     j = 0
 
     # this is the inner loop, where we also call it as a runner.
-    acc_avg, loss_avg, prec_avg, rec_avg, f1_avg, lat_avg = 0, 0, 0, 0, 0, 0
-    accs, losses, precs, recs, f1s, latencies = [], [], [], [], [], []
+    acc_avg, loss_avg, prec_avg, rec_avg, f1_avg, lat_avg, gpu_avg = 0, 0, 0, 0, 0, 0, 0
+    accs, losses, precs, recs, f1s, latencies, gpu_pow = [], [], [], [], [], [], []
 
     for inputs in data_module.train_dataloader():
+        # measure GPU power before prediction
+        if has_gpu:
+            _, gpu_before_pred = sum(fetch_gpu_power()[0])
+
         xs, ys = inputs
         start = time.time()
         preds = mg.model(xs)
         end = time.time()
+
+        # measure GPU power after prediction
+        if has_gpu:
+            _, gpu_after_pred = sum(fetch_gpu_power()[0])
+            gpu_used = gpu_after_pred - gpu_before_pred
+            gpu_pow.append(gpu_used)
 
         # calculate loss
         loss = torch.nn.functional.cross_entropy(preds, ys)
@@ -187,6 +218,11 @@ for i, config in enumerate(search_spaces):
     recorded_f1.append(f1_avg.item())
     recorded_lats.append(lat_avg)
 
+    # add in gpu power if gpu is being used
+    if has_gpu:
+        gpu_avg = sum(gpu_pow) / len(gpu_pow)
+        recorded_gpu_pow.append(gpu_avg)
+
 # print metric results
 print("recorded_accs:  ", recorded_accs)
 print("recorded_loss:  ", recorded_loss)
@@ -195,3 +231,4 @@ print("recorded_rec:  ", recorded_rec)
 print("recorded_f1:  ", recorded_f1)
 print("recorded_lats:  ", recorded_lats)
 print("model_size:  ", model_size)
+print(f"recorded_gpu_pow:  {recorded_gpu_pow}" if has_gpu else "No GPU found")
