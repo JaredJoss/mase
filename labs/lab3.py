@@ -1,6 +1,7 @@
 import sys
 import logging
 import os
+import torch
 from pathlib import Path
 from pprint import pprint as pp
 import time
@@ -105,11 +106,12 @@ for d_config in data_in_frac_widths:
         # in fact, only primitive data types in python are doing implicit copy when a = b happens
         search_spaces.append(copy.deepcopy(pass_args))
 
-print("search_spaces:  ", search_spaces)
+# print("search_spaces:  ", search_spaces)
 
 # grid search
 import torch
 from torchmetrics.classification import MulticlassAccuracy
+from torchmetrics import Precision, Recall, F1Score
 
 mg, _ = init_metadata_analysis_pass(mg, None)
 mg, _ = add_common_metadata_analysis_pass(mg, {"dummy_in": dummy_in})
@@ -119,46 +121,77 @@ mg, _ = add_software_metadata_analysis_pass(mg, None)
 model_size = sum(p.numel() for p in mg.model.parameters())
 
 metric = MulticlassAccuracy(num_classes=5)
+precision = Precision(num_classes=5, average='weighted', task='multiclass')
+recall = Recall(num_classes=5, average='weighted', task='multiclass')
+f1_score = F1Score(num_classes=5, average='weighted', task='multiclass')
+
 num_batchs = 5
 # This first loop is basically our search strategy,
 # in this case, it is a simple brute force search
 
-recorded_accs, recorded_loss, recorded_lats = [], [], []
+recorded_accs, recorded_loss, recorded_prec, recorded_rec, recorded_f1, recorded_lats = [], [], [], [], [], []
 
 for i, config in enumerate(search_spaces):
     mg, _ = quantize_transform_pass(mg, config)
     j = 0
 
     # this is the inner loop, where we also call it as a runner.
-    acc_avg, loss_avg, lat_avg = 0, 0, 0
-    accs, losses, latencies = [], [], []
+    acc_avg, loss_avg, prec_avg, rec_avg, f1_avg, lat_avg = 0, 0, 0, 0, 0, 0
+    accs, losses, precs, recs, f1s, latencies = [], [], [], [], [], []
 
     for inputs in data_module.train_dataloader():
         xs, ys = inputs
         start = time.time()
         preds = mg.model(xs)
         end = time.time()
+
+        # calculate loss
         loss = torch.nn.functional.cross_entropy(preds, ys)
+        # calculate accuracy
         acc = metric(preds, ys)
+        # calculate precision
+        prec = precision(preds, ys)
+        # caluclate recall
+        rec = recall(preds, ys)
+        # calculate f1_score
+        f1 = f1_score(preds, ys)
+
+        # append to list
         accs.append(acc)
         losses.append(loss)
+        precs.append(prec)  
+        recs.append(rec)
+        f1s.append(f1)
 
         if j > num_batchs:
             break
         j += 1
 
+        # calculate latency
         latency = end - start
         latencies.append(latency)
 
+    # calculate averages
     acc_avg = sum(accs) / len(accs)
     loss_avg = sum(losses) / len(losses)
+    prec_avg = sum(precs) / len(precs)
+    rec_avg = sum(recs) / len(recs)
+    f1_avg = sum(f1s) / len(f1s)
     lat_avg = sum(latencies) / len(latencies)
 
-    recorded_accs.append(acc_avg)
-    recorded_loss.append(loss_avg)
+    # append averges to list
+    recorded_accs.append(acc_avg.item())
+    recorded_loss.append(loss_avg.item())
+    recorded_prec.append(prec_avg.item())
+    recorded_rec.append(rec_avg.item())
+    recorded_f1.append(f1_avg.item())
     recorded_lats.append(lat_avg)
 
+# print metric results
 print("recorded_accs:  ", recorded_accs)
 print("recorded_loss:  ", recorded_loss)
+print("recorded_prec:  ", recorded_prec)
+print("recorded_rec:  ", recorded_rec)
+print("recorded_f1:  ", recorded_f1)
 print("recorded_lats:  ", recorded_lats)
 print("model_size:  ", model_size)
