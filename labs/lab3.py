@@ -123,20 +123,16 @@ num_batchs = 5
 # This first loop is basically our search strategy,
 # in this case, it is a simple brute force search
 
-recorded_accs, recorded_loss, recorded_lats, recorded_flops = [], [], [], []
+recorded_accs, recorded_loss, recorded_lats = [], [], []
+
 for i, config in enumerate(search_spaces):
     mg, _ = quantize_transform_pass(mg, config)
     j = 0
 
-    # flops, macs, params = get_model_profile(mg.model)
-
-    # print("flops:  ", flops)
-    # print("macs:  ", macs)
-    # print("params:  ", params)
-
     # this is the inner loop, where we also call it as a runner.
-    acc_avg, loss_avg, lat_avg, flops_avg = 0, 0, 0, 0
-    accs, losses, latencies, flops_lst = [], [], [], []
+    acc_avg, loss_avg, lat_avg = 0, 0, 0
+    accs, losses, latencies = [], [], []
+
     for inputs in data_module.train_dataloader():
         xs, ys = inputs
         start = time.time()
@@ -146,13 +142,6 @@ for i, config in enumerate(search_spaces):
         acc = metric(preds, ys)
         accs.append(acc)
         losses.append(loss)
-
-        # Count FLOPs in the forward pass
-        # flops, _ = profile(mg.model, inputs=(xs,))
-        # flops_lst.append(flops)
-
-        flops, params = get_model_complexity_info(mg.model, (xs,), as_strings=True, print_per_layer_stat=True)
-        print('FLOPs:', flops)
 
         if j > num_batchs:
             break
@@ -164,15 +153,12 @@ for i, config in enumerate(search_spaces):
     acc_avg = sum(accs) / len(accs)
     loss_avg = sum(losses) / len(losses)
     lat_avg = sum(latencies) / len(latencies)
-    flops_avg = sum(flops_lst) / len(flops_lst)
 
     recorded_accs.append(acc_avg)
     recorded_loss.append(loss_avg)
     recorded_lats.append(lat_avg)
-    recorded_flops.append(flops_avg)
 
-# print("recorded_accs:  ", recorded_accs)
-# print("recorded_loss:  ", recorded_loss)
-# print("recorded_lats:  ", recorded_lats)
-# print("model_size:  ", model_size)
-# print("recorded_flops:  ", recorded_flops)
+print("recorded_accs:  ", recorded_accs)
+print("recorded_loss:  ", recorded_loss)
+print("recorded_lats:  ", recorded_lats)
+print("model_size:  ", model_size)
