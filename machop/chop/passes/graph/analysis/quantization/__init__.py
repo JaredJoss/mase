@@ -1,1 +1,2 @@
 from .calculate_avg_bits import calculate_avg_bits_mg_analysis_pass
+from .count_flops import count_flops_mg_analysis_pass

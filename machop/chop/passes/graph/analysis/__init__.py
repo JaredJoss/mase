@@ -23,7 +23,7 @@ from .verify import (
     verify_metadata_analysis_pass,
     verify_software_metadata_analysis_pass,
 )
-from .quantization import calculate_avg_bits_mg_analysis_pass
+from .quantization import calculate_avg_bits_mg_analysis_pass, count_flops_mg_analysis_pass
 
 from .pruning import (
     add_pruning_metadata_analysis_pass,
