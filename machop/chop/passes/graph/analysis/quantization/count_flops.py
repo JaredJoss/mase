@@ -1,7 +1,29 @@
 import torch
 
+from chop.passes.graph.utils import get_node_actual_target
 
-def count_flops_mg_analysis_pass(module, in_data, out_data):
+def count_flops_mg_analysis_pass(graph, pass_args: dict):
+    modules_dict = {}
+    flops = 0
+    for node in graph.fx_graph.nodes:
+        try:
+            data_in = (node.meta['mase'].parameters['common']['args']['data_in_0']['value'],)
+        except KeyError:
+            data_in = (None,)
+        data_out = (node.meta['mase'].parameters['common']['results']['data_out_0']['value'],)
+
+        module = get_node_actual_target(node)
+        if isinstance(module, torch.nn.Module):
+            modules = calculate_modules(module, data_in, data_out)
+            modules_dict[module] = modules
+            flops += modules['computations']
+
+    print("Modules Breakdown: ", modules_dict)
+    print("\nTotal Flops: ", flops)
+
+    return graph, {"modules_dict": modules_dict, "flops": flops}
+
+def calculate_modules(module, in_data, out_data):
     # Collect computation statistics.
     if isinstance(module, torch.nn.AdaptiveAvgPool2d):
         # One computation per input pixel - window size is chosen adaptively
