@@ -149,3 +149,22 @@ mg, _ = redefine_linear_transform_pass(
     graph=mg, pass_args={"config": pass_config})
 
 print(mg)
+
+# define a new model
+class JSC_Three_Linear_Layers(nn.Module):
+    def __init__(self):
+        super(JSC_Three_Linear_Layers, self).__init__()
+        self.seq_blocks = nn.Sequential(
+            nn.BatchNorm1d(16),  # 0
+            nn.ReLU(16),  # 1
+            nn.Linear(16, 16),  # linear seq_2
+            nn.ReLU(16),  # 3
+            nn.Linear(16, 16),  # linear seq_4
+            nn.ReLU(16),  # 5
+            nn.Linear(16, 5),  # linear seq_6
+            nn.ReLU(5),  # 7
+        )
+
+    def forward(self, x):
+        return self.seq_blocks(x)
+    
