@@ -129,6 +129,30 @@ print("model_size:  ", model_size)
 print(f"recorded_gpu_pow:  {recorded_gpu_pow}" if has_gpu else "No GPU found")
 ```
 
+
+The results are plotted and the following is observed;
+
+![alt text](lab_3_media/Accuracy.png)
+**Figure 1** - Accuracy results vs quantize value
+
+![alt text](lab_3_media/Loss.png)
+**Figure 2** - Loss results vs quantize value
+
+![alt text](lab_3_media/Precision.png)
+**Figure 3** - Precision results vs quantize value
+
+![alt text](lab_3_media/Recall.png)
+**Figure 4** - Recall results vs quantize value
+
+![alt text](lab_3_media/F1-Score.png)
+**Figure 5** - F1-Score results vs quantize value
+
+![alt text](lab_3_media/FLOPs.png)
+**Figure 6** - FLOPs results vs quantize value
+
+![alt text](<lab_3_media/Model Size.png>)
+**Figure 7** - Model Size results vs quantize value
+
 # Question 3
 The brute force search can be implemented by following the procedure `optuna.py`. In the `sampler_map` function, an addiotnal case for brutesearch is added;
 
@@ -140,3 +164,14 @@ case "bruteforce":
 To use this new search method, the `sampler` variable in the `[search.strategy.setup]` section of the `jsc_toy_by_type.toml` is changed to `brutesearch`.
 
 # Question 4
+
+Efficiency in sampling is indicative of how effectively a method navigates the search space and discovers optimal solutions within a restricted number of samples or iterations.
+
+To compare the two methods, 40 runs of brute force and TPE-based search are condicted. The computation times for each method are comparable when measured. However, the TPE sampler, unlike the Brute Force Sampler, doesn't exhaustively attempt all combinations. Instead, it strategically samples the hyperparameter space, drawing insights from prior trials. In each iteration, it uses probability to forecast which hyperparameters are likely to produce superior results. Therefore, for example, if 100 trials  were done, the TPE Sampler, would conducts 100 distinct experiments, continually updating its knowledge and honing the hyperparameter space to identify the optimal configurations. Conversely, in the Brute Force approach, the number of trials is restricted by the potential combinations. 
+
+After the completion of all runs, it was found that the brute force approach took 17.28s per trial wehile the TPE samler took 16.88s per trial. 
+
+To see the effect that each method has, the accuracy for each configuration is plotted in Figure x below. 
+
+
+
