@@ -214,31 +214,6 @@ for cm in channel_multipliers:
     pass_config['seq_blocks_6']['config']['channel_multiplier'] = cm
     search_spaces.append(copy.deepcopy(pass_config))
 
-
-## Train  variables
-task = "channel_multiplier"
-dataset_name = "jsc"
-num_workers = os.cpu_count()
-optimizer = "adam"
-max_epochs: int = 1
-# max_steps: int = -1
-gradient_accumulation_steps: int = 1
-learning_rate: float = 6e-3
-weight_decay: float = 0.0
-lr_scheduler_type: str = "linear"
-num_warmup_steps: int = 0
-save_path: str = "./ckpts/chMultiplier"
-auto_requeue = False
-load_name: str = None
-load_type: str = ""
-evaluate_before_training: bool = False
-profile: bool = True
-plt_trainer_args = {
-"max_epochs": max_epochs,
-"accelerator": "cpu",
-}
-visualizer = None
-
 import torch
 import subprocess
 from torchmetrics.classification import MulticlassAccuracy
@@ -298,10 +273,6 @@ for i, config in enumerate(search_spaces):
     # calculate model size (number of parameters)
     model_size = sum(p.numel() for p in new_mg.model.parameters())
     recorded_model_sizes.append(model_size)
-
-    # Train model
-    train(new_mg.model, model_info, data_module, data_module.dataset_info, task, optimizer, learning_rate, weight_decay, plt_trainer_args, auto_requeue, save_path, visualizer, load_name, load_type)
-    metrics = test(new_mg.model, model_info, data_module, data_module.dataset_info, task, optimizer, learning_rate, weight_decay, plt_trainer_args, auto_requeue, save_path, visualizer, load_name, load_type, return_metrics=True)
 
     for inputs in data_module.train_dataloader():
         # measure GPU power before prediction
