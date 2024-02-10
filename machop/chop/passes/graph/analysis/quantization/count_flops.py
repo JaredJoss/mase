@@ -1,8 +1,25 @@
 import torch
-
 from chop.passes.graph.utils import get_node_actual_target
 
 def count_flops_mg_analysis_pass(graph, pass_args: dict):
+    """
+    Calculates the number of floating-point operations (FLOPs) on the given graph.
+
+    :param graph: The graph to analyze.
+    :type graph: MaseGraph
+    :param pass_args: Additional arguments for the analysis pass.
+    :type pass_args: dict
+
+    :return: A tuple containing the analyzed graph and a dictionary with the module statistics and calculated FLOPs.
+    :rtype: tuple
+    :return graph: The analyzed graph.
+    :rtype graph: MaseGraph
+    :return dict: A dictionary with the following keys:
+        - 'modules_dict' (dict): A dictionary of module statistics.
+        - 'flops' (int): The number of FLOPs in a graph.
+    :rtype dict: dict
+    """
+        
     modules_dict = {}
     flops = 0
     for node in graph.fx_graph.nodes:
