@@ -30,14 +30,12 @@ def instantiate_relu(inplace):
 def instantiate_batchnorm(num_features, eps, momentum, affine, track_running_stats):
     return nn.BatchNorm1d(num_features, eps, momentum, affine, track_running_stats)
 
-
 def get_config(config: dict, name: str):
     if name in config:
         return config[name]["config"]
     else:
         return config["default"]["config"]
     
-
 def redefine_transform_pass(graph, pass_args=None):
     main_config = pass_args.pop('config')
     default = main_config.pop('default', None)
@@ -54,7 +52,6 @@ def redefine_transform_pass(graph, pass_args=None):
         name = config.get("name", None)
         
         actual_target = get_node_actual_target(node)
-        # Process Linear layers
         if isinstance(actual_target, nn.Linear):
             if name is not None:
                 if node.target=='x' or node.target=='output':
@@ -79,7 +76,6 @@ def redefine_transform_pass(graph, pass_args=None):
                 parent_name, name = get_parent_name(node.target)
                 setattr(graph.modules[parent_name], name, new_module)
             
-        # Process ReLU layers
         elif isinstance(actual_target, ReLU):
             name = config.get("name")
             if name:
@@ -87,12 +83,11 @@ def redefine_transform_pass(graph, pass_args=None):
                 new_module = instantiate_relu(ori_module.inplace)
                 setattr(graph.modules[node.target], "inplace", new_module.inplace)
         
-        # Process BatchNorm1d layers
         elif isinstance(actual_target, nn.BatchNorm1d):
             name = config.get("name")
             if name:
                 ori_module = graph.modules[node.target]
-                # Instantiate a new BatchNorm1d with the original module's parameters
+                # new BatchNorm1d with the original parameters
                 new_module = instantiate_batchnorm(
                     ori_module.num_features, ori_module.eps, ori_module.momentum, 
                     ori_module.affine, ori_module.track_running_stats)

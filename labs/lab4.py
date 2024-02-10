@@ -205,7 +205,7 @@ pass_config = {
 # _ = report_graph_analysis_pass(mg)
 
 ## Q2
-# create a search sapce
+# create a search space
 channel_multipliers = [1, 2, 3, 4, 5]
 search_spaces = []
 for cm in channel_multipliers:

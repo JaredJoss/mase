@@ -26,7 +26,7 @@ DEFAULT_CHANNEL_MODIFIER_CONFIG = {
 
 class ChannelMultiplier(SearchSpaceBase):
     """
-    Post-Training channel modfifier search space for mase graph.
+    Post-Training channel modifier search space for mase graph.
     """
 
     def _post_init_setup(self):
