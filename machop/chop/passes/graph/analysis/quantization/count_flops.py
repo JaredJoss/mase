@@ -19,7 +19,7 @@ def count_flops_mg_analysis_pass(graph, pass_args: dict):
             flops += modules['computations']
 
     print("Modules Breakdown: ", modules_dict)
-    print("\nTotal Flops: ", flops)
+    print("Total Flops: ", flops)
 
     return graph, {"modules_dict": modules_dict, "flops": flops}
 

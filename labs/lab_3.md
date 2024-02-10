@@ -138,3 +138,5 @@ case "bruteforce":
 ```
 
 To use this new search method, the `sampler` variable in the `[search.strategy.setup]` section of the `jsc_toy_by_type.toml` is changed to `brutesearch`.
+
+# Question 4

@@ -31,6 +31,8 @@ from chop.passes.graph import (
 
 from chop.passes.graph.transforms import quantize_transform_pass
 
+from chop.passes.graph.analysis.quantization import count_flops_mg_analysis_pass
+
 from chop.tools.get_input import InputGenerator
 from chop.ir.graph.mase_graph import MaseGraph
 
@@ -130,7 +132,7 @@ num_batchs = 5
 # This first loop is basically our search strategy,
 # in this case, it is a simple brute force search
 
-recorded_accs, recorded_loss, recorded_prec, recorded_rec, recorded_f1, recorded_lats, recorded_gpu_pow = [], [], [], [], [], [], []
+recorded_accs, recorded_loss, recorded_prec, recorded_rec, recorded_f1, recorded_lats, recorded_gpu_pow, recorded_model_sizes, recorded_flops = [], [], [], [], [], [], [], [], []
     
 # get current GPU power usage
 def fetch_gpu_power():
@@ -153,12 +155,27 @@ def fetch_gpu_power():
 _, has_gpu = fetch_gpu_power()
 
 for i, config in enumerate(search_spaces):
-    mg, _ = quantize_transform_pass(mg, config)
+    # generate the mase graph and initialize node metadata
+    mg = MaseGraph(model=model)
+    mg, _ = init_metadata_analysis_pass(mg, None)
+    mg, _ = add_common_metadata_analysis_pass(mg, {"dummy_in": dummy_in})
+    mg, _ = add_software_metadata_analysis_pass(mg, None)
+
+    new_mg, _ = quantize_transform_pass(mg, config)
+
+    _, result = count_flops_mg_analysis_pass(new_mg, {})
+    flops = result['flops']
+    recorded_flops.append(flops)
+
     j = 0
 
     # this is the inner loop, where we also call it as a runner.
     acc_avg, loss_avg, prec_avg, rec_avg, f1_avg, lat_avg, gpu_avg = 0, 0, 0, 0, 0, 0, 0
     accs, losses, precs, recs, f1s, latencies, gpu_pow = [], [], [], [], [], [], []
+
+    # calculate model size (number of parameters)
+    model_size = sum(p.numel() for p in new_mg.model.parameters())
+    recorded_model_sizes.append(model_size)
 
     for inputs in data_module.train_dataloader():
         # measure GPU power before prediction
@@ -167,7 +184,7 @@ for i, config in enumerate(search_spaces):
 
         xs, ys = inputs
         start = time.time()
-        preds = mg.model(xs)
+        preds = new_mg.model(xs)
         end = time.time()
 
         # measure GPU power after prediction
@@ -230,5 +247,6 @@ print("recorded_prec:  ", recorded_prec)
 print("recorded_rec:  ", recorded_rec)
 print("recorded_f1:  ", recorded_f1)
 print("recorded_lats:  ", recorded_lats)
-print("model_size:  ", model_size)
+print("recorded_model_sizes:  ", recorded_model_sizes)
+print("recorded_flops:  ", recorded_flops)
 print(f"recorded_gpu_pow:  {recorded_gpu_pow}" if has_gpu else "No GPU found")
