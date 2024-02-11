@@ -1,3 +1,4 @@
+## Pre-Question: Why is is unusual to unusual to sequence three linear layers consecutively without interposing any non-linear activations
 When you stack multiple linear layers without non-linear activation functions in between, the composition of these layers remains a linear transformation. This means that no matter how many layers you add, the overall operation can be represented as a single linear transformation. As a result, the network would lack the capacity to learn complex, non-linear relationships between input and output.
 
 The purpose of activation functions such as ReLU, sigmoid, or tanh is to introduce non-linearities into the network. These non-linearities allow the neural network to learn and model more complex patterns and relationships in the data. Without them, the network would be limited to linear transformations, making it unable to capture the intricacies of many real-world problems.
@@ -256,7 +257,7 @@ def redefine_linear_transform(graph, pass_args_=None):
     return graph, {}
 ```
 
-The pass_args to pass into the function;
+The `pass_args` to pass into the function;
 
 ```python
 pass_args = {
@@ -308,7 +309,7 @@ The following putput is observed;
 ![alt text](lab_4_media/lab_4_task_3.png)
 **Figure 9** - Output of redefined function to allow for non-linear scaled layers
 
-From Figure 9, it is evident that the layers are been scaled non-uniformly. 
+From Figure 9, it is evident that the layers have been scaled non-uniformly. 
 
 
 # Question 4
@@ -318,7 +319,6 @@ For the actual implementation of the pass, a [modifier.py](../machop/chop/passes
 
 ```python
 for node in graph.fx_graph.nodes:
-        i += 1
         # if node name is not matched, it won't be tracked
         config = main_config.get(node.name, default)['config']
         name = config.get("name", None)
@@ -326,8 +326,6 @@ for node in graph.fx_graph.nodes:
         actual_target = get_node_actual_target(node)
         if isinstance(actual_target, nn.Linear):
             if name is not None:
-                if node.target=='x' or node.target=='output':
-                    continue
                 ori_module = graph.modules[node.target]
                 in_features = ori_module.in_features
                 out_features = ori_module.out_features
@@ -352,7 +350,7 @@ for node in graph.fx_graph.nodes:
             name = config.get("name")
             if name:
                 ori_module = graph.modules[node.target]
-                # new BatchNorm1d with the original parameters
+                # cerate a new module from previous parameters
                 new_module = instantiate_batchnorm(
                     ori_module.num_features, ori_module.eps, ori_module.momentum, 
                     ori_module.affine, ori_module.track_running_stats)
@@ -368,7 +366,7 @@ A parent variable is used to link a linear layer to its most recent linear layer
 
 Then, a `toml` file is created to define the configuration with the following information;
 
-```toml
+```python
 [search.search_space]
 name = "graph/quantize/channel_size_modifier"
 
@@ -436,7 +434,7 @@ elif isinstance(actual_target, nn.Conv2d):
 
 After that, the `toml` file can be created in a similar way previously, except instead of `seq_blocks` names, there are `feature_layers` names, as follows;
 
-```toml
+```python
 [search.search_space.seed.feature_layers_0.config]
 name = ["output_only"]
 channel_multiplier = [1, 2, 4]
@@ -476,12 +474,12 @@ parent = ["feature_layers_10"]
 
 In the configuration file is created, TPE search can be used by setting the search strategy to `optuna` and setting the samler to `tpe` as follows:
 
-```toml
+```python
 [search.strategy]
 name = "optuna"
 ```
 
-```toml
+```python
 [search.strategy.setup]
 n_jobs = 1
 n_trials = 20
