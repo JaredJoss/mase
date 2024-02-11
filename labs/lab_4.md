@@ -211,9 +211,96 @@ The results are plotted and the following is observed;
 ![alt text](<lab_4_media/Model Size.png>)
 **Figure 7** - Model Size results vs multiplier value
 
+![alt text](lab_4_media/Latency.png)
+**Figure 8** - Average Latency vs multiplier value
+
+From Figure 1, the greatest accuracy is achieved with a multiplier of 1. Interestingly, the best F1-score is achieved for a multiplier value of 2, indicating bias in the model. 
+
+Figure 6 shows that the number of FLOPs in the architecture increases with increasing multipliers. This is because, as can be seen in Figure 7, the size of the model increases with increasing multiplier size. Additionally, Figure 8 shows that the model with a multiplier value of 1 has the highest latency with 2.55ms. 
 
 # Question 3
+The following function can be used;
 
+```python
+def redefine_linear_transform(graph, pass_args_=None):
+    pass_args = deepcopy(pass_args_)
+    default = pass_args.pop('default', None)
+
+    if default is None:
+        raise ValueError("default configuration must be provided.")
+    
+    for _, node in enumerate(graph.fx_graph.nodes, start=1):
+        node_config = pass_args.get(node.name, default)['config']
+        name = node_config.get("name")
+        
+        if name is not None:
+            ori_module = graph.modules[node.target]
+            in_features = ori_module.in_features
+            out_features = ori_module.out_features
+            bias = ori_module.bias
+            
+            multiplier_in = node_config.get("channel_multiplier_in", 1)
+            multiplier_out = node_config.get("channel_multiplier_out", node_config.get("channel_multiplier", 1))
+            
+            if name == "output_only":
+                out_features = out_features * multiplier_out
+            elif name == "both":
+                in_features = in_features * multiplier_in
+                out_features = out_features * multiplier_out
+            elif name == "input_only":
+                in_features *= multiplier_in
+            
+            new_module = instantiate_linear(in_features, out_features, bias)
+            parent_name, name = get_parent_name(node.target)
+            setattr(graph.modules[parent_name], name, new_module)
+    return graph, {}
+```
+
+The pass_args to pass into the function;
+
+```python
+pass_args = {
+    "by": "name",
+    "default": {
+        "config": {
+            "name": None
+            }
+    },
+    "seq_blocks_2": {
+        "config": {
+            "name": "output_only", 
+            "channel_mult_out": 2
+            }
+    },
+    "seq_blocks_4": {
+        "config": {
+            "name": "both", 
+            "channel_mult_in": 2, 
+            "channel_mult_out": 4
+            }
+    },
+    "seq_blocks_6": {
+        "config": {
+            "name": "input_only", 
+            "channel_mult_in": 4
+            }
+    },
+}
+```
+
+Using the `redefine_linear_transform` function;
+
+```python
+# create model
+model = JSC_Three_Linear_Layers()
+
+# generate the mase graph and initialize metadata
+mg = MaseGraph(model=model)
+mg, _ = init_metadata_analysis_pass(mg, None)
+
+# perform transformation on the model
+redefine_linear_transform(mg, pass_args)
+```
 
 # Question 4
 First, a folder called `channel_modifier` is created under the `search_space` directory. In this folder, a [grpah.py](../machop/chop/actions/search/search_space/channel_modifier/graph.py) file is created which contains a `ChannelMultiplier` class, which in turn inherits from the `SearchSpaceBase` base class ([base.py](../machop/chop/actions/search/search_space/base.py) class).

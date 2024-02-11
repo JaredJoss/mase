@@ -1,15 +1,10 @@
 import sys
 import logging
-import os
 import subprocess
 import torch
 from pathlib import Path
 from pprint import pprint as pp
 import time
-from count_flops_in_forward_pass import count_flops_in_forward_pass
-from thop import profile
-from deepspeed.profiling.flops_profiler import get_model_profile
-from ptflops import get_model_complexity_info
 
 # figure out the correct path
 machop_path = Path(".").resolve() /"machop"
@@ -109,8 +104,7 @@ for d_config in data_in_frac_widths:
         # in fact, only primitive data types in python are doing implicit copy when a = b happens
         search_spaces.append(copy.deepcopy(pass_args))
 
-# print("search_spaces:  ", search_spaces)
-
+# import pdb; pdb.set_trace()
 # grid search
 import torch
 from torchmetrics.classification import MulticlassAccuracy
@@ -233,7 +227,7 @@ for i, config in enumerate(search_spaces):
     recorded_prec.append(prec_avg.item())
     recorded_rec.append(rec_avg.item())
     recorded_f1.append(f1_avg.item())
-    recorded_lats.append(lat_avg)
+    recorded_lats.append(lat_avg*1000)
 
     # add in gpu power if gpu is being used
     if has_gpu:
@@ -250,3 +244,35 @@ print("recorded_lats:  ", recorded_lats)
 print("recorded_model_sizes:  ", recorded_model_sizes)
 print("recorded_flops:  ", recorded_flops)
 print(f"recorded_gpu_pow:  {recorded_gpu_pow}" if has_gpu else "No GPU found")
+
+# plot results
+import matplotlib.pyplot as plt
+
+def plot_(configs, values, name):
+    plt.figure(figsize=(12, 8))
+    bars = plt.bar(configs, values)
+
+    plt.xlabel('Channel Multiplier', fontsize=12)
+    plt.ylabel(name.capitalize(), fontsize=12)
+    plt.title(f'{name} vs Transform', fontsize=15)
+    plt.xticks(range(len(values)), configs, rotation=-45, ha='left')
+
+    # Add values on top of the bars
+    for bar, value in zip(bars, values):
+        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height(),
+            f'{value:.3f}', ha='center', va='bottom')
+
+    plt.tight_layout()
+    
+    plt.savefig(f'labs/lab_3_media/{name}.png', dpi=300)
+
+configs = [f"({x['linear']['config']['data_in_width']}, {x['linear']['config']['data_in_frac_width']}), ({x['linear']['config']['weight_width']}, {x['linear']['config']['weight_frac_width']})" for x in search_spaces]
+
+plot_(configs, recorded_accs, 'Accuracy')
+plot_(configs, recorded_loss, 'Loss')
+plot_(configs, recorded_prec, 'Precision')
+plot_(configs, recorded_rec, 'Recall')
+plot_(configs, recorded_f1, 'F1-Score')
+plot_(configs, recorded_model_sizes, 'Model Size')
+plot_(configs, recorded_flops, 'FLOPs')
+plot_(configs, recorded_lats, 'Latency')

@@ -106,10 +106,10 @@ class JSC_Three_Linear_Layers(nn.Module):
 model = JSC_Three_Linear_Layers()
 
 # generate the mase graph and initialize node metadata
-# mg = MaseGraph(model=model)
-# mg, _ = init_metadata_analysis_pass(mg, None)
-# mg, _ = add_common_metadata_analysis_pass(mg, {"dummy_in": dummy_in})
-# mg, _ = add_software_metadata_analysis_pass(mg, None)
+mg = MaseGraph(model=model)
+mg, _ = init_metadata_analysis_pass(mg, None)
+mg, _ = add_common_metadata_analysis_pass(mg, {"dummy_in": dummy_in})
+mg, _ = add_software_metadata_analysis_pass(mg, None)
 
 def instantiate_linear(in_features, out_features, bias):
     if bias is not None:
@@ -119,7 +119,10 @@ def instantiate_linear(in_features, out_features, bias):
         out_features=out_features,
         bias=bias)
 
-def redefine_linear_transform_pass(graph, pass_args=None):
+from copy import deepcopy
+
+def redefine_linear_transform_pass(graph, pass_args_=None):
+    pass_args = deepcopy(pass_args_)
     main_config = pass_args.pop('config')
     default = main_config.pop('default', None)
     if default is None:
@@ -198,13 +201,18 @@ pass_config = {
     },
 }
 
-# this performs the architecture transformation based on the config
-# mg, _ = redefine_linear_transform_pass(
-#     graph=mg, pass_args={"config": pass_config})
+# performs architecture transformation based on the config
+mg, _ = redefine_linear_transform_pass(
+    graph=mg, pass_args_={"config": pass_config})
 
-# _ = report_graph_analysis_pass(mg)
+_ = report_graph_analysis_pass(mg)
 
 ## Q2
+import torch
+import subprocess
+from torchmetrics.classification import MulticlassAccuracy
+from torchmetrics import Precision, Recall, F1Score
+
 # create a search space
 channel_multipliers = [1, 2, 3, 4, 5]
 search_spaces = []
@@ -214,15 +222,27 @@ for cm in channel_multipliers:
     pass_config['seq_blocks_6']['config']['channel_multiplier'] = cm
     search_spaces.append(copy.deepcopy(pass_config))
 
-import torch
-import subprocess
-from torchmetrics.classification import MulticlassAccuracy
-from torchmetrics import Precision, Recall, F1Score
-
+# instantiate metrics
 metric = MulticlassAccuracy(num_classes=5)
 precision = Precision(num_classes=5, average='weighted', task='multiclass')
 recall = Recall(num_classes=5, average='weighted', task='multiclass')
 f1_score = F1Score(num_classes=5, average='weighted', task='multiclass')
+
+# train variables
+task = "channel_multiplier"
+optimizer = "adam"
+dataset_name = "jsc"
+learning_rate = 1e-3
+weight_decay = 0.0
+plt_trainer_args = {
+"max_epochs": 2,
+"accelerator": "gpu",
+}
+save_path: str = "../mase_output/channel_mod"
+auto_requeue = False
+visualizer = None
+load_name = None
+load_type = ""
 
 num_batchs = 5
 recorded_accs, recorded_loss, recorded_prec, recorded_rec, recorded_f1, recorded_lats, recorded_gpu_pow, recorded_model_sizes, recorded_flops = [], [], [], [], [], [], [], [], []
@@ -258,7 +278,7 @@ for i, config in enumerate(search_spaces):
     mg, _ = add_software_metadata_analysis_pass(mg, None)
 
     new_mg, _ = redefine_linear_transform_pass(
-    graph=mg, pass_args={"config": config})
+    graph=mg, pass_args_={"config": config})
 
     _, result = count_flops_mg_analysis_pass(new_mg, {})
     flops = result['flops']
@@ -281,6 +301,11 @@ for i, config in enumerate(search_spaces):
 
         xs, ys = inputs
         start = time.time()
+        # train model with multipliers
+        train(new_mg.model, model_info, data_module, data_module.dataset_info,
+                task, optimizer, learning_rate, weight_decay, plt_trainer_args,
+                auto_requeue, save_path, visualizer, load_name, load_type)
+        # make prediction
         preds = new_mg.model(xs)
         end = time.time()
 
@@ -324,13 +349,13 @@ for i, config in enumerate(search_spaces):
     f1_avg = sum(f1s) / len(f1s)
     lat_avg = sum(latencies) / len(latencies)
 
-    # append averges to list
+    # append averages to list
     recorded_accs.append(acc_avg.item())
     recorded_loss.append(loss_avg.item())
     recorded_prec.append(prec_avg.item())
     recorded_rec.append(rec_avg.item())
     recorded_f1.append(f1_avg.item())
-    recorded_lats.append(lat_avg)
+    recorded_lats.append(lat_avg*1000)
 
     # add in gpu power if gpu is being used
     if has_gpu:
@@ -373,3 +398,80 @@ plot_(channel_multipliers, recorded_rec, 'Recall')
 plot_(channel_multipliers, recorded_f1, 'F1-Score')
 plot_(channel_multipliers, recorded_model_sizes, 'Model Size')
 plot_(channel_multipliers, recorded_flops, 'FLOPs')
+plot_(channel_multipliers, recorded_lats, 'Latency')
+
+
+## Q3
+def redefine_linear_transform(graph, pass_args_=None):
+    pass_args = deepcopy(pass_args_)
+    default = pass_args.pop('default', None)
+
+    if default is None:
+        raise ValueError("default configuration must be provided.")
+    
+    for _, node in enumerate(graph.fx_graph.nodes, start=1):
+        node_config = pass_args.get(node.name, default)['config']
+        name = node_config.get("name")
+        
+        if name is not None:
+            ori_module = graph.modules[node.target]
+            in_features = ori_module.in_features
+            out_features = ori_module.out_features
+            bias = ori_module.bias
+            
+            multiplier_in = node_config.get("channel_multiplier_in", 1)
+            multiplier_out = node_config.get("channel_multiplier_out", node_config.get("channel_multiplier", 1))
+            
+            if name == "output_only":
+                out_features = out_features * multiplier_out
+            elif name == "both":
+                in_features = in_features * multiplier_in
+                out_features = out_features * multiplier_out
+            elif name == "input_only":
+                in_features *= multiplier_in
+            
+            new_module = instantiate_linear(in_features, out_features, bias)
+            parent_name, name = get_parent_name(node.target)
+            setattr(graph.modules[parent_name], name, new_module)
+    return graph, {}
+
+# argument configuration
+pass_args = {
+    "by": "name",
+    "default": {
+        "config": {
+            "name": None
+            }
+    },
+    "seq_blocks_2": {
+        "config": {
+            "name": "output_only", 
+            "channel_multiplier_out": 2
+            }
+    },
+    "seq_blocks_4": {
+        "config": {
+            "name": "both", 
+            "channel_multiplier_in": 2, 
+            "channel_multiplier_out": 4
+            }
+    },
+    "seq_blocks_6": {
+        "config": {
+            "name": "input_only", 
+            "channel_multiplier_in": 4
+            }
+    },
+}
+
+# create model
+model = JSC_Three_Linear_Layers()
+
+# generate the mase graph and initialize node metadata
+mg = MaseGraph(model=model)
+mg, _ = init_metadata_analysis_pass(mg, None)
+
+# perform transformation on the model
+redefine_linear_transform(mg, pass_args)
+
+mg, _ = init_metadata_analysis_pass(mg, None)

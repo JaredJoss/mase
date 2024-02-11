@@ -117,16 +117,6 @@ for i, config in enumerate(search_spaces):
     if has_gpu:
         gpu_avg = sum(gpu_pow) / len(gpu_pow)
         recorded_gpu_pow.append(gpu_avg)
-
-# print metric results
-print("recorded_accs:  ", recorded_accs)
-print("recorded_loss:  ", recorded_loss)
-print("recorded_prec:  ", recorded_prec)
-print("recorded_rec:  ", recorded_rec)
-print("recorded_f1:  ", recorded_f1)
-print("recorded_lats:  ", recorded_lats)
-print("model_size:  ", model_size)
-print(f"recorded_gpu_pow:  {recorded_gpu_pow}" if has_gpu else "No GPU found")
 ```
 
 
@@ -152,6 +142,36 @@ The results are plotted and the following is observed;
 
 ![alt text](<lab_3_media/Model Size.png>)
 **Figure 7** - Model Size results vs quantize value
+
+![alt text](lab_3_media/Latency.png)
+**Figure 8** - Latency vs quantize value
+
+From Figure 1 and Figure 2, it is evident that the best accuracy and smallest loss is observed for the following configuration:
+
+```python
+{
+"by": "type",
+"default": {"config": {"name": None}},
+"linear": {
+        "config": {
+            "name": "integer",
+            # data
+            "data_in_width": 8,
+            "data_in_frac_width": 4,
+            # weight
+            "weight_width": 16,
+            "weight_frac_width": 8,
+            # bias
+            "bias_width": 8,
+            "bias_frac_width": 4,
+        }
+},}
+```
+Furthermore, this configuration also gives the largest precision, recall and F1-Score, as evident from Figures 3-5. 
+
+Also, from Figure 6, it is evident that the number of FLOPs is not affected by the quantization values and remains constant at 1320. Moreover, the size of the model also remains consistent at 117 parameters.
+
+Additionally, the average latency for every configuration can be seen in Figure 8.  
 
 # Question 3
 The brute force search can be implemented by following the procedure `optuna.py`. In the `sampler_map` function, an addiotnal case for brutesearch is added;
