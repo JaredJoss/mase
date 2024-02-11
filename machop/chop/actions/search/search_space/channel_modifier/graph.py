@@ -44,13 +44,13 @@ class ChannelMultiplier(SearchSpaceBase):
         else:
             self.model.train()
 
-        if self.mg is None:
-            assert self.model_info.is_fx_traceable, "Model must be fx traceable"
-            mg = MaseGraph(self.model)
-            mg, _ = init_metadata_analysis_pass(mg, None)
-            mg, _ = add_common_metadata_analysis_pass(
-                mg, {"dummy_in": self.dummy_input, "force_device_meta": False}
-            )
+        # if self.mg is None:
+        # assert self.model_info.is_fx_traceable, "Model must be fx traceable"
+        mg = MaseGraph(self.model)
+        mg, _ = init_metadata_analysis_pass(mg, None)
+        mg, _ = add_common_metadata_analysis_pass(
+            mg, {"dummy_in": self.dummy_input, "force_device_meta": False}
+        )
             # self.mg = mg
         if sampled_config is not None:
             # mg, _ = quantize_transform_pass(self.mg, sampled_config)
@@ -75,33 +75,33 @@ class ChannelMultiplier(SearchSpaceBase):
         choices = {}
         seed = self.config["seed"]
 
-        # for node in mase_graph.fx_graph.nodes:
-        #     if node.name in seed:
-        #         choices[node.name] = deepcopy(seed[node.name])
-        #     else:
-        #         choices[node.name] = deepcopy(seed["default"])
-
         for node in mase_graph.fx_graph.nodes:
-            node_info[node.name] = {
-                "mase_type": get_mase_type(node),
-                "mase_op": get_mase_op(node),
-            }
+            if node.name in seed:
+                choices[node.name] = deepcopy(seed[node.name])
+            else:
+                choices[node.name] = deepcopy(seed["default"])
 
-        match self.config["setup"]["by"]:
-            case "name":
-                # iterate through all the channel modifier nodes in the graph
-                # if the node_name is in the seed, use the node seed search space
-                # else use the default search space for the node
-                for n_name, n_info in node_info.items():
-                    if n_info["mase_op"] in CHANNEL_OP:
-                        if n_name in seed:
-                            choices[n_name] = deepcopy(seed[n_name])
-                        else:
-                            choices[n_name] = deepcopy(seed["default"])
-            case _:
-                raise ValueError(
-                    f"Unknown quantization by: {self.config['setup']['by']}"
-                )
+        # for node in mase_graph.fx_graph.nodes:
+        #     node_info[node.name] = {
+        #         "mase_type": get_mase_type(node),
+        #         "mase_op": get_mase_op(node),
+        #     }
+
+        # match self.config["setup"]["by"]:
+        #     case "name":
+        #         # iterate through all the channel modifier nodes in the graph
+        #         # if the node_name is in the seed, use the node seed search space
+        #         # else use the default search space for the node
+        #         for n_name, n_info in node_info.items():
+        #             if n_info["mase_op"] in CHANNEL_OP:
+        #                 if n_name in seed:
+        #                     choices[n_name] = deepcopy(seed[n_name])
+        #                 else:
+        #                     choices[n_name] = deepcopy(seed["default"])
+        #     case _:
+        #         raise ValueError(
+        #             f"Unknown quantization by: {self.config['setup']['by']}"
+        #         )
 
         # flatten the choices and choice_lengths
         flatten_dict(choices, flattened=self.choices_flattened)
