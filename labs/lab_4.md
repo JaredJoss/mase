@@ -303,7 +303,7 @@ redefine_linear_transform(mg, pass_args)
 ```
 
 # Question 4
-First, a folder called `channel_modifier` is created under the `search_space` directory. In this folder, a [grpah.py](../machop/chop/actions/search/search_space/channel_modifier/graph.py) file is created which contains a `ChannelMultiplier` class, which in turn inherits from the `SearchSpaceBase` base class ([base.py](../machop/chop/actions/search/search_space/base.py) class).
+First, a folder called `channel_modifier` is created under the `search_space` directory. In this folder, a [graph.py](../machop/chop/actions/search/search_space/channel_modifier/graph.py) file is created which contains a `ChannelMultiplier` class, which in turn inherits from the `SearchSpaceBase` base class ([base.py](../machop/chop/actions/search/search_space/base.py) class).
 
 For the actual implementation of the pass, a [modifier.py](../machop/chop/passes/graph/transforms/channel_modifier/modifier.py) file is created under the `channel_modifier` folder which is situated under passes > graph > transforms. This file is responsible for traversing the nodes of a given graph and multiplying the correct layers as follows;
 
@@ -320,24 +320,17 @@ for node in graph.fx_graph.nodes:
                 if node.target=='x' or node.target=='output':
                     continue
                 ori_module = graph.modules[node.target]
-                in_features = config.get('in_features', 16)
-                out_features = config.get('out_features', 16)
+                in_features = ori_module.in_features
+                out_features = ori_module.out_features
                 bias = ori_module.bias
                 if name == "output_only":
-                    in_features = ori_module.in_features
                     out_features = out_features * config["channel_multiplier"]
-                    pre_out=config["channel_multiplier"]
                 elif name == "both":
-                    in_features = in_features * pre_out
+                    in_features = in_features * main_config.get(config['parent'], default)['config']["channel_multiplier"]
                     out_features = out_features * config["channel_multiplier"]
-                    pre_out = pre_in
-                    pre_in = config["channel_multiplier"]
                 elif name == "input_only":
-                    in_features = in_features * pre_in
-                    out_features = ori_module.out_features
+                    in_features = in_features * main_config.get(config['parent'], default)['config']["channel_multiplier"]
                 new_module = instantiate_linear(in_features, out_features, bias)
-                parent_name, name = get_parent_name(node.target)
-                setattr(graph.modules[parent_name], name, new_module)
             
         elif isinstance(actual_target, ReLU):
             name = config.get("name")
@@ -356,4 +349,142 @@ for node in graph.fx_graph.nodes:
                     ori_module.affine, ori_module.track_running_stats)
                 parent_name, child_name = get_parent_name(node.target)
                 setattr(graph.modules[parent_name], child_name, new_module)   
+
+        if new_module is not None:
+            parent_name, name = get_parent_name(node.target)
+            setattr(graph.modules[parent_name], name, new_module)
 ```
+
+A parent variable is used to link a linear layer to its most recent linear layer parent, in order to ensure that the output of the parent is equal to the input of the child. 
+
+Then, a `toml` file is created to define the configuration with the following information;
+
+```toml
+[search.search_space]
+name = "graph/quantize/channel_size_modifier"
+
+[search.search_space.seed.default.config]
+# the only choice "NA" is used to indicate that layers are not quantized by default
+name = ["NA"]
+channel_multiplier = [1, 2, 3, 4]
+
+[search.search_space.seed.seq_blocks_2.config]
+name = ["output_only"]
+channel_multiplier = [1, 2, 3, 4]
+
+[search.search_space.seed.seq_blocks_4.config]
+name = ["both"]
+channel_multiplier = [1, 2, 3, 4]
+parent = ['seq_blocks_2']
+
+[search.search_space.seed.seq_blocks_6.config]
+name = ["input_only"]
+channel_multiplier = [1, 2, 3, 4]
+parent = ['seq_blocks_4']
+```
+
+# Optional Task
+For this task, I will define a search space for channel dimention for the VGG7 Network.
+
+First, the VGG7 netwrork is trained on the Cifar10 data using the following command;
+
+```python
+./ch train vgg7 cifar10 --accelerator gpu
+```
+
+Then, to be able to work with the VGG7 network, the `modifier.py` must be amended to allow for `Conv2d` and `BatchNorm2d` layers. This can be seen in the code below;
+
+```python
+# BatchNorm2d layers
+elif isinstance(actual_target, nn.BatchNorm2d):
+            parent = config.get("parent", None)
+            if parent is not None:
+                ori_module = graph.modules[node.target]
+                num_features, eps, momentum, affine = ori_module.num_features, ori_module.eps, ori_module.momentum, ori_module.affine
+                num_features = num_features * main_config.get(parent, default)['config']["channel_multiplier"]
+                new_module = nn.BatchNorm2d(num_features, eps, momentum, affine)
+
+# Conv2d layers
+elif isinstance(actual_target, nn.Conv2d):
+    if name is not None:
+        ori_module = graph.modules[node.target]
+        in_channels = ori_module.in_channels
+        out_channels = ori_module.out_channels
+        bias = ori_module.bias
+        if name == "output_only":
+            out_channels = out_channels * config["channel_multiplier"]
+        elif name == "both":
+            in_channels = in_channels * main_config.get(config['parent'], default)['config']["channel_multiplier"]
+            out_channels = out_channels * config["channel_multiplier"]
+        elif name == "input_only":
+            in_channels = in_channels * main_config.get(config['parent'], default)['config']["channel_multiplier"]
+        new_module = nn.Conv2d(in_channels, out_channels,
+                                kernel_size=ori_module.kernel_size, stride=ori_module.stride,
+                                padding=ori_module.padding, dilation=ori_module.dilation,
+                                groups=ori_module.groups, bias=ori_module.bias is not None,
+                                padding_mode=ori_module.padding_mode)
+```
+
+After that, the `toml` file can be created in a similar way previously, except instead of `seq_blocks` names, there are `feature_layers` names, as follows;
+
+```toml
+[search.search_space.seed.feature_layers_0.config]
+name = ["output_only"]
+channel_multiplier = [1, 2, 4]
+
+[search.search_space.seed.feature_layers_1.config]
+parent = ["feature_layers_0"]
+
+[search.search_space.seed.feature_layers_3.config]
+name = ["both"]
+parent = ["feature_layers_0"]
+channel_multiplier = [1, 2, 3, 4]
+
+[search.search_space.seed.feature_layers_4.config]
+parent = ["feature_layers_3"]
+
+[search.search_space.seed.feature_layers_7.config]
+name = ["both"]
+parent = ["feature_layers_3"]
+channel_multiplier = [1, 2, 3, 4]
+
+[search.search_space.seed.feature_layers_8.config]
+parent = ["feature_layers_7"]
+
+[search.search_space.seed.feature_layers_10.config]
+name = ["both"]
+parent = ["feature_layers_7"]
+channel_multiplier = [1, 2, 3, 4]
+
+[search.search_space.seed.feature_layers_11.config]
+name = ["input_only"]
+parent = ["feature_layers_10"]
+
+[search.search_space.seed.feature_layers_14.config]
+name = ["input_only"]
+parent = ["feature_layers_10"]
+```
+
+In the configuration file is created, TPE search can be used by setting the search strategy to `optuna` and setting the samler to `tpe` as follows:
+
+```toml
+[search.strategy]
+name = "optuna"
+```
+
+```toml
+[search.strategy.setup]
+n_jobs = 1
+n_trials = 20
+timeout = 20000
+sampler = "tpe"
+sum_scaled_metrics = true 
+direction = "maximize"
+```
+
+
+After the search command is run, the following is observed;
+
+![alt text](lab_4_media/vgg_search.png)
+**Figure 9** - Output of using TPE search to tune the VGG channel dimension search space
+
