@@ -10,7 +10,7 @@ accelerator = "cpu"
 project = "vgg7-search-test"
 seed = 42
 log_every_n_steps = 5
-load_name = "../mase_output/vgg_test_gpu/software/training_ckpts/best.ckpt"
+load_name = "../mase_output/vgg_test_gpu_20_epochs/software/training_ckpts/best.ckpt"
 load_type = "pl"
 
 [search.search_space]
@@ -61,7 +61,6 @@ parent = ["feature_layers_10"]
 
 
 [search.strategy]
-#name = "txl_bf"
 name = "optuna"
 eval_mode = false
 
@@ -79,23 +78,15 @@ eval_mode = false
 data_loader = "val_dataloader"
 num_samples = 512
 
-[search.strategy.hw_runner.hw_dummy]
-#[search.strategy.hw_runner.average_bitwidth]
-#compare_to = 32 # compare to FP32
 
 [search.strategy.setup]
 n_jobs = 1
-n_trials = 2
+n_trials = 10
 timeout = 20000
 sampler = "tpe"
 sum_scaled_metrics = true # single objective
 direction = "maximize"
-#sum_scaled_metrics = false # multi objective
 
 [search.strategy.metrics]
-#loss.scale = 1.0
-#loss.direction = "minimize"
 accuracy.scale = 1.0
 accuracy.direction = "maximize"
-#average_bitwidth.scale = -0.1
-#average_bitwidth.direction = "minimize"

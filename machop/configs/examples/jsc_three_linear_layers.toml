@@ -7,7 +7,7 @@ max_epochs = 10
 batch_size = 512
 learning_rate = 1e-2
 accelerator = "cpu"
-project = "jsc-three-linear-layers"
+project = "jsc-three-linear-layers-test"
 seed = 42
 log_every_n_steps = 5
 load_name = "../mase_output/three_linear_layers/software/training_ckpts/best.ckpt"
@@ -16,32 +16,27 @@ load_type = "pl"
 [search.search_space]
 name = "graph/quantize/channel_size_modifier"
 
-[search.search_space.setup]
-by = "name"
+# [search.search_space.setup]
+# by = "name"
 
 [search.search_space.seed.default.config]
 # the only choice "NA" is used to indicate that layers are not quantized by default
 name = ["NA"]
-channel_multiplier = [1, 2, 3, 5]
+channel_multiplier = [1, 2, 4]
 
 [search.search_space.seed.seq_blocks_2.config]
 name = ["output_only"]
-channel_multiplier = [1, 2, 3, 5]
-in_features = [16]
-out_features = [16]
-
+channel_multiplier = [1, 2, 4]
 
 [search.search_space.seed.seq_blocks_4.config]
 name = ["both"]
-channel_multiplier = [1, 2, 3, 5]
-in_features = [16]
-out_features = [16]
+channel_multiplier = [1, 2, 4]
+parent = ['seq_blocks_2']
 
 [search.search_space.seed.seq_blocks_6.config]
 name = ["input_only"]
 channel_multiplier = [1, 2, 3, 5]
-in_features = [16]
-out_features = [16]
+parent = ['seq_blocks_4']
 
 
 [search.strategy]
