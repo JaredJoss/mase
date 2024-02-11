@@ -219,19 +219,21 @@ From Figure 1, the greatest accuracy is achieved with a multiplier of 1. Interes
 Figure 6 shows that the number of FLOPs in the architecture increases with increasing multipliers. This is because, as can be seen in Figure 7, the size of the model increases with increasing multiplier size. Additionally, Figure 8 shows that the model with a multiplier value of 1 has the highest latency with 2.55ms. 
 
 # Question 3
-The following function can be used;
+The following function can be usednso that the layers do not scale uniformly;
 
 ```python
 def redefine_linear_transform(graph, pass_args_=None):
     pass_args = deepcopy(pass_args_)
-    default = pass_args.pop('default', None)
+    main_config = pass_args.pop('config')
+    default = main_config.pop('default', None)
+    new_module = None
 
     if default is None:
         raise ValueError("default configuration must be provided.")
     
     for _, node in enumerate(graph.fx_graph.nodes, start=1):
-        node_config = pass_args.get(node.name, default)['config']
-        name = node_config.get("name")
+        config = main_config.get(node.name, default)['config']
+        name = config.get("name", None)
         
         if name is not None:
             ori_module = graph.modules[node.target]
@@ -239,18 +241,16 @@ def redefine_linear_transform(graph, pass_args_=None):
             out_features = ori_module.out_features
             bias = ori_module.bias
             
-            multiplier_in = node_config.get("channel_multiplier_in", 1)
-            multiplier_out = node_config.get("channel_multiplier_out", node_config.get("channel_multiplier", 1))
-            
             if name == "output_only":
-                out_features = out_features * multiplier_out
+                out_features = out_features * config["channel_multiplier"]
             elif name == "both":
-                in_features = in_features * multiplier_in
-                out_features = out_features * multiplier_out
+                in_features = in_features * main_config.get(config['parent'], default)['config']["channel_multiplier"]
+                out_features = out_features * config["channel_multiplier"]
             elif name == "input_only":
-                in_features *= multiplier_in
-            
+                in_features = in_features * main_config.get(config['parent'], default)['config']["channel_multiplier"]
             new_module = instantiate_linear(in_features, out_features, bias)
+        
+        if new_module is not None:
             parent_name, name = get_parent_name(node.target)
             setattr(graph.modules[parent_name], name, new_module)
     return graph, {}
@@ -269,20 +269,21 @@ pass_args = {
     "seq_blocks_2": {
         "config": {
             "name": "output_only", 
-            "channel_mult_out": 2
+            "channel_multiplier": 2
             }
     },
     "seq_blocks_4": {
         "config": {
             "name": "both", 
-            "channel_mult_in": 2, 
-            "channel_mult_out": 4
+            "channel_multiplier": 4,
+            "parent": "seq_blocks_2"
             }
     },
     "seq_blocks_6": {
         "config": {
             "name": "input_only", 
-            "channel_mult_in": 4
+            "channel_multiplier": 4,
+            "parent": "seq_blocks_4"
             }
     },
 }
@@ -299,7 +300,8 @@ mg = MaseGraph(model=model)
 mg, _ = init_metadata_analysis_pass(mg, None)
 
 # perform transformation on the model
-redefine_linear_transform(mg, pass_args)
+mg, _ = redefine_linear_transform(mg, pass_args)
+_ = report_graph_analysis_pass(mg)
 ```
 
 # Question 4
