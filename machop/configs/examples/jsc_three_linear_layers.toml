@@ -16,8 +16,8 @@ load_type = "pl"
 [search.search_space]
 name = "graph/quantize/channel_size_modifier"
 
-# [search.search_space.setup]
-# by = "name"
+[search.search_space.setup]
+by = "name"
 
 [search.search_space.seed.default.config]
 # the only choice "NA" is used to indicate that layers are not quantized by default
