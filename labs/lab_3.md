@@ -191,7 +191,11 @@ To compare the two methods, 40 runs of brute force and TPE-based search are cond
 
 After the completion of all runs, it was found that the brute force approach took 17.28s per trial wehile the TPE samler took 16.88s per trial. 
 
-To see the effect that each method has, the accuracy for each configuration is plotted in Figure x below. 
+To see the effect that each method has, the accuracy for each configuration is plotted in Figure 9 below. 
 
+![alt text](lab_3_media/tpe_vs_bf.png)
+**Figure 9** - TPE vs. Brute Force search
 
+It is evident from Figure 9 that TPE takes less steps to find the best configuration due to how it conducts its search. It makes better choices initially but then gets poorer results the longer the search goes on. 
+Brute force tries all configurations one by one and therefore oscillates a lot. 
 
