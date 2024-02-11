@@ -219,7 +219,7 @@ From Figure 1, the greatest accuracy is achieved with a multiplier of 1. Interes
 Figure 6 shows that the number of FLOPs in the architecture increases with increasing multipliers. This is because, as can be seen in Figure 7, the size of the model increases with increasing multiplier size. Additionally, Figure 8 shows that the model with a multiplier value of 1 has the highest latency with 2.55ms. 
 
 # Question 3
-The following function can be usednso that the layers do not scale uniformly;
+To ensure that the layers do not scale uniformly, the a parent lkey must be used in order to get the channel multiplier value of the previous Linear Layer. This is to ensure that the output of the parent linear layer is equal to the input of the child linear layer. The follwoing fucntion is used; 
 
 ```python
 def redefine_linear_transform(graph, pass_args_=None):
@@ -303,6 +303,13 @@ mg, _ = init_metadata_analysis_pass(mg, None)
 mg, _ = redefine_linear_transform(mg, pass_args)
 _ = report_graph_analysis_pass(mg)
 ```
+
+The following putput is observed;
+![alt text](lab_4_media/lab_4_task_3.png)
+**Figure 9** - Output of redefined function to allow for non-linear scaled layers
+
+From Figure 9, it is evident that the layers are been scaled non-uniformly. 
+
 
 # Question 4
 First, a folder called `channel_modifier` is created under the `search_space` directory. In this folder, a [graph.py](../machop/chop/actions/search/search_space/channel_modifier/graph.py) file is created which contains a `ChannelMultiplier` class, which in turn inherits from the `SearchSpaceBase` base class ([base.py](../machop/chop/actions/search/search_space/base.py) class).
