@@ -59,7 +59,6 @@ parent = ["feature_layers_10"]
 name = ["input_only"]
 parent = ["feature_layers_10"]
 
-
 [search.strategy]
 name = "optuna"
 eval_mode = false
@@ -78,10 +77,12 @@ eval_mode = false
 data_loader = "val_dataloader"
 num_samples = 512
 
+[search.strategy.hw_runner.average_bitwidth]
+compare_to = 32 # compare to FP32
 
 [search.strategy.setup]
 n_jobs = 1
-n_trials = 10
+n_trials = 2
 timeout = 20000
 sampler = "tpe"
 sum_scaled_metrics = true # single objective
