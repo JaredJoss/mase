@@ -494,4 +494,3 @@ After the search command is run, the following is observed;
 
 ![alt text](lab_4_media/vgg_search.png)
 **Figure 9** - Output of using TPE search to tune the VGG channel dimension search space
-

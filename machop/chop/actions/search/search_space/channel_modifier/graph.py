@@ -77,7 +77,6 @@ class ChannelMultiplier(SearchSpaceBase):
                         choices[node.name] = deepcopy(seed[node.name])
                     else:
                         choices[node.name] = deepcopy(seed["default"])
-        
             case _:
                 raise ValueError(
                     f"Unknown transformation by: {self.config['setup']['by']}"
