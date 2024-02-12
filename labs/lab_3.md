@@ -200,3 +200,10 @@ It is evident from Figure 9 that TPE takes less steps to find the best configura
 
 Brute force tries all configurations one by one and therefore oscillates a lot. 
 
+The outputs of the TPE search and Brute Force search can be seen in Figure 10 and Figure 11, respectively.
+
+![alt text](lab_3_media/lab_3_task_4_tpe.png)
+**Figure 10** - TPE search results
+
+![alt text](lab_3_media/lab_3_task_4_brute_force.png)
+**Figure 11** - Brute Force search results

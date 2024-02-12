@@ -5,9 +5,6 @@ Larger batch sizes result in better computational efficiency. From Figure 2, it 
 
 Smaller batch sizes can lead to better generalization. Training with smaller batches introduces more noise into the weight updates, which can help the model generalize better to unseen data. Larger batches resulted in a model that memorizes the training data more, leading to overfitting on the training set and potentially poor generalization to new data. The most optimal batch size with the Mase default paramters is 128 and 256, where both achieve a validation accuracy of ~70%. The largest batch size tested, 512, received a validation accuracy of ~43%.
 
-<!-- The figure below shows the results of varying the batch size for the jsc-tiny model over 10 epochs. Batch sizes of 64, 128, 256, and 512.
-After 10 epochs, the model with a batch size of 64 has a test accuracy of 49.50%, batch size of 128 has an accuracy of 51.87%, batch size of 256 has an accuracy of 50.48% while a batch size of 512 has an accuracy of 44.64%. -->
-
 ![Alt text](lab_1_media/epochs_train_acc_step.png)
 **Figure 1** - Training accuracy with different batch sizes
 
@@ -25,9 +22,6 @@ However, if the maximum number of epochs is too high, the model may start memori
 Additonally, increasing the maximum number of epochs increases the overall training time. This is because the model goes through more iterations of updating its weights with each additional epoch. This is evident in Figure 3 and Figure 4 where 100 epochs took ~3.5 hours to train and 5 epochs took ~3.5 minutes to train. In both these situations the validation and training accuracy remained largely the same, indicating that the model is not complex enough to properly fit the data.
 
 Furthermore, it is evident from Figure 4 that each model follows a very similar path to eacother and at epoch 5, there is only 0.13% range in the validation accuracy of all the models. This is expected as all hyperparmeters are the same except the number of epochs and so similart results will occur at the same epoch number. 
-
-<!-- To show the impact of this, the jsc-tiny model was used with a batch size of 128 over 5, 10, and 20 epochs. 
-After 5 epochs, the accuracy is 50.26%, it is 51.87% after 10 epochs and x% after 20 epochs.  -->
 
 ![Alt text](lab_1_media/epochs_train_acc_step.png)
 **Figure 3** - Training accuracy with different epochs
@@ -132,7 +126,12 @@ Figure 7 below shows the results of the testing. It is evident that this network
 ![Alt text](lab_1_media/lab_1_task_5.png)
 **Figure 7** - Test accuracy of custom network
 
-<!-- Furthermore, the network is tested againt the Tiny network in order to fully evaluate it. -->
+
+Furthermore,  Figure 8 shows a comparison of the training curves for both the Tiny and Custom Networks.
+![Alt text](lab_1_media/lab_1_tiny_medium_train.png)
+**Figure 8** - Comparison of Tiny Network and Custom Network
+
+
 
 
 
