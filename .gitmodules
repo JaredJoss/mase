@@ -10,3 +10,6 @@
 [submodule "Docker"]
 	path = Docker
 	url = git@github.com:JianyiCheng/mase-docker.git
+[submodule "zero-cost-nas"]
+	path = zero-cost-nas
+	url = https://github.com/JaredJoss/zero-cost-nas.git
