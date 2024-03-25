@@ -171,9 +171,6 @@ class ZeroCostProxy(SearchSpaceBase):
 
             epoch_loss_test = running_loss_test / len(test_loader.dataset)
 
-            # if (epoch+1) % 1 == 0:
-            #     print(f'Epoch [{epoch+1}/{epochs}], Train Loss: {epoch_loss_train:.4f}, Validation Loss: {epoch_loss_test:.4f}')
-
             # Check if this is the best model based on test loss and update accordingly
             if epoch_loss_test < best_test_loss:
                 best_test_loss = epoch_loss_test
@@ -218,22 +215,25 @@ class ZeroCostProxy(SearchSpaceBase):
                 "dataset"
             ],  # Dataset to loader: can be cifar10, cifar100, ImageNet16-120
             "data": str(get_project_root())
-            + "/data",  # path to naslib/data where cifar is saved
+            + "/data",  # path to naslib/data where the data is saved
             "search": {
                 "seed": self.config["zc"][
                     "seed"
                 ],  # Seed to use in the train, validation and test dataloaders
                 "train_portion": 0.7,  # Portion of train dataset to use as train dataset. The rest is used as validation dataset.
                 "batch_size": 32,  # batch size of the dataloaders
-            },
+                "cutout": False
+            }
         }
         config = CfgNode(config_dict)
 
-        # Get the dataloaders
-        train_loader, _, _, _, _ = get_train_val_loaders(config)
 
         for zcp_name in self.config["zc"]["zc_proxies"]:
             if self.config["zc"]["calculate_proxy"]:
+                if self.config["zc"]["dataset"] == 'ImageNet16-120':
+                    raise ValueError("Please set 'calculate_proxy' to false")
+                # Get the dataloaders
+                train_loader, _, _, _, _ = get_train_val_loaders(config)
                 # train and query expect different ZCP formats
                 zcp_train = [
                     {"zero_cost_scores": eval_zcp(t_arch, zcp_name, train_loader)}

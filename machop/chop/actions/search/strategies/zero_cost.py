@@ -110,7 +110,7 @@ class SearchStrategyZeroCost(SearchStrategyBase):
                 for metric in item["metrics"].keys()
             )
 
-            # Assume 'train_accuracy' is your target
+            # Assume 'test_accuracy' is your target
             actual_accuracy = item["test_accuracy"]
 
             # Calculating squared error loss
@@ -151,9 +151,6 @@ class SearchStrategyZeroCost(SearchStrategyBase):
         return model_results
 
     def search(self, search_space) -> optuna.study.Study:
-        # import pdb
-        # pdb.set_trace()
-
         study_kwargs = {
             "sampler": self.sampler_map(self.config["setup"]["sampler"]),
             "direction": self.config["setup"]["direction"],
@@ -183,7 +180,7 @@ class SearchStrategyZeroCost(SearchStrategyBase):
         model_results = self.get_optuna_prediction(model_results, best_params)
 
         self._save_study(study, self.save_dir / "study.pkl")
-        self._save_search_dataframe(study, search_space, self.save_dir / "log.json")
+        self._save_search_dataframe(study, self.save_dir / "log.json")
         self._save_best_zero_cost(
             search_space, model_results, self.save_dir / "metrics.json"
         )
@@ -191,7 +188,7 @@ class SearchStrategyZeroCost(SearchStrategyBase):
         return study
 
     @staticmethod
-    def _save_search_dataframe(study: optuna.study.Study, search_space, save_path):
+    def _save_search_dataframe(study: optuna.study.Study, save_path):
         df = study.trials_dataframe(
             attrs=(
                 "number",
