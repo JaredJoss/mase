@@ -25,10 +25,7 @@ jobs:
   hardware-regression-test:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/jianyicheng/mase-docker/mase-ci-build:latest
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.MASE_DOCKER_CRED }}
+      image: deepwok/mase-docker:latest
     steps:
 
       # Clone the MASE repo and its submodules.
@@ -109,8 +106,7 @@ jobs:
         run: |
             pip3 --version 
             python3 --version
-            pip3 install -e . -vvv
-            export PYTHONPATH="${PATH}:$(pwd):$(pwd)/machop"
+            pip3 install .
             python3 scripts/test-hardware.py -a
 
 

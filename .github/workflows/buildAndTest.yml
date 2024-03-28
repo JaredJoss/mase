@@ -3,14 +3,8 @@ name: Software Test
 on:
   push:
     branches: [ "main" ]
-    paths:
-      - 'machop/**'
-      - '!machop/sphinx_docs/**'
   pull_request:
     branches: [ "main" ]
-    paths:
-      - 'machop/**'
-      - '!machop/sphinx_docs/**'
   workflow_dispatch:
     logLevel:
           description: 'Log level'
@@ -27,10 +21,7 @@ jobs:
   software-regression-test:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/jianyicheng/mase-docker/mase-ci-build:latest
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.MASE_DOCKER_CRED }}
+      image: deepwok/mase-docker:latest
     steps:
 
       # Clone the MASE repo and its submodules.
